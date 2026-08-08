@@ -4149,12 +4149,12 @@ const KINEPRO_LEGACY_KEY="kinepro.clinic.v1";
 const ROUTINE_DRAFT_KEY="eter.kinepro.routineDraft.v1";
 const CDN="https://www.gstatic.com/firebasejs/10.12.5";
 const KINEPRO_CONFIG={
-  apiKey:"AIzaSyB5VKkrUiwptpk-z99ORY-VF492gFD_FtA",
-  authDomain:"agenda-d3987.firebaseapp.com",
-  projectId:"agenda-d3987",
-  storageBucket:"agenda-d3987.firebasestorage.app",
-  messagingSenderId:"649656331502",
-  appId:"1:649656331502:web:3a34b5eda4e2461fab97ff"
+  apiKey:"AIzaSyBkca-zmx5xcAM6DgXLsleJkzi3mVlswZE",
+  authDomain:"prokinesio-be743.firebaseapp.com",
+  projectId:"prokinesio-be743",
+  storageBucket:"prokinesio-be743.firebasestorage.app",
+  messagingSenderId:"598419896756",
+  appId:"1:598419896756:web:82c658768dd4d42f101ae1"
 };
 const PROMO_CATALOG=[
   {id:'espalda-cuello-suelta',kind:'single',service:'Espalda y cuello',name:'Espalda y cuello · Sesión suelta',sessions:1,price:35000,intervalDays:0,frequency:'Sesión individual',sameMonth:false},
@@ -4941,14 +4941,13 @@ function renderRoutineList(){
     });
     return [...groups.values()].map(group=>{
       const initials=String(group.label||'SP').trim().split(/\s+/).slice(0,2).map(part=>part.charAt(0)).join('').toUpperCase()||'SP';
-      const expanded=!(ui.expandedRoutineGroups instanceof Set)||!ui.expandedRoutineGroups.has(group.key);
-      return `<section class="routine-patient-group ${expanded?'':'is-collapsed'}" data-routine-group="${esc(group.key)}">
+      return `<section class="routine-patient-group">
         <header class="routine-patient-group-head">
           <div class="routine-patient-group-identity">
             <span class="routine-patient-avatar ${group.template?'is-template':''}" aria-hidden="true">${group.template?'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h4"/></svg>':esc(initials)}</span>
             <div><h3>${esc(group.label)}</h3><p>${group.items.length} rutina${group.items.length===1?'':'s'} asignada${group.items.length===1?'':'s'}</p></div>
           </div>
-          <div class="routine-group-head-actions">${group.patient?`<button type="button" class="btn btn-sm routine-group-profile" data-action="profile" data-id="${esc(group.patient.id)}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><circle cx="12" cy="8" r="3.2"/><path d="M5.5 19c.8-3.8 3.2-5.7 6.5-5.7s5.7 1.9 6.5 5.7"/></svg> Ver ficha</button>`:''}<button type="button" class="routine-group-toggle" data-routine-group-toggle="${esc(group.key)}" aria-expanded="${expanded}" aria-label="${expanded?'Contraer':'Expandir'} rutinas de ${esc(group.label)}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button></div>
+          ${group.patient?`<button type="button" class="btn btn-sm routine-group-profile" data-action="profile" data-id="${esc(group.patient.id)}">Ver ficha</button>`:''}
         </header>
         <div class="routine-patient-grid">${group.items.map(renderRoutineCard).join('')}</div>
       </section>`
@@ -6202,76 +6201,9 @@ document.addEventListener('click',event=>{const button=event.target.closest('[da
 document.addEventListener('click',event=>{const button=event.target.closest('[data-action="print-routine"]');if(!button)return;event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();printRoutinePlan(button.dataset.id)},true);
 const planPrintObserver=new MutationObserver(injectPlanPrintControl);planPrintObserver.observe(document.body,{childList:true,subtree:true});
 const planDayFieldObserver=new MutationObserver(()=>{const list=$('#exerciseDraftList');if(list&&!list.querySelector('.pro-day-grid'))renderExerciseDraftListWithDay()});planDayFieldObserver.observe(document.body,{childList:true,subtree:true});
-ui.expandedRoutineGroups=ui.expandedRoutineGroups instanceof Set?ui.expandedRoutineGroups:new Set();
-document.addEventListener('click',event=>{const button=event.target.closest('[data-routine-group-toggle]');if(!button)return;event.preventDefault();const group=button.closest('[data-routine-group]'),key=button.dataset.routineGroupToggle;if(!group)return;const collapsed=group.classList.toggle('is-collapsed');button.setAttribute('aria-expanded',String(!collapsed));button.setAttribute('aria-label',`${collapsed?'Expandir':'Contraer'} rutinas`);if(collapsed)ui.expandedRoutineGroups.add(key);else ui.expandedRoutineGroups.delete(key)},true);
 document.head.insertAdjacentHTML('beforeend',`<style>
 .pro-day-grid{grid-template-columns:repeat(5,minmax(0,1fr))!important}
 @media print{@page{size:A4 portrait;margin:0}#printArea .training-plan{display:block;color:#161616;background:#fff}.training-plan .plan-page{width:210mm;min-height:297mm;padding:11mm 12mm 9mm;background:#fff;display:flex;flex-direction:column;page-break-inside:avoid}.training-plan .plan-page-break{break-after:page;page-break-after:always}.training-plan .plan-head{position:relative;display:grid;grid-template-columns:1fr 64mm;grid-template-rows:31mm 22mm;gap:5mm 8mm;padding-top:12mm}.training-plan .plan-stripes{height:7mm;background:repeating-linear-gradient(118deg,transparent 0 8mm,#d7d9d8 8mm 11mm,transparent 11mm 17mm)}.training-plan .plan-head>.plan-stripes{position:absolute;top:0;left:-12mm;right:-12mm}.training-plan .plan-brand{position:relative;align-self:center;font-size:17mm;letter-spacing:1.2mm;line-height:1;font-family:Arial,sans-serif}.training-plan .plan-brand strong{font-weight:900}.training-plan .plan-brand em{font-size:10mm;color:#14A79A;font-style:normal;font-weight:400;letter-spacing:3mm;margin-left:3mm}.training-plan .plan-swoosh{position:absolute;width:42mm;border-top:1.4mm solid #14A79A;top:11mm;left:0;transform:rotate(-19deg);border-radius:50%}.training-plan .plan-title{align-self:center;text-align:right;font-family:'Arial Narrow',Impact,sans-serif;font-weight:900;font-style:italic;font-stretch:condensed;font-size:12mm;line-height:.9}.training-plan .plan-patient,.training-plan .plan-date{border-radius:6mm;background:#C7E7E4;padding:4.5mm 5mm;font-size:5.2mm;line-height:1.65}.training-plan .plan-patient{grid-column:1}.training-plan .plan-date{grid-column:2;background:#DDF1EF;align-self:stretch;white-space:nowrap}.training-plan .plan-patient div{display:flex;gap:2mm}.training-plan .plan-patient span,.training-plan .plan-date span{flex:1;min-width:0;border-bottom:1px dotted #161616;padding-left:1.5mm;overflow:hidden;white-space:nowrap}.training-plan .plan-days{margin-top:8mm}.training-plan .plan-day{display:grid;grid-template-columns:10mm 1fr;margin:0 0 8mm;break-inside:avoid;page-break-inside:avoid}.training-plan .plan-day-label{writing-mode:vertical-rl;transform:rotate(180deg);display:flex;align-items:center;justify-content:center;font-size:6.2mm;font-weight:900;letter-spacing:.5mm}.training-plan .plan-day-content{min-width:0}.training-plan .plan-columns{display:grid;grid-template-columns:1fr 28mm 24mm;min-height:8mm;align-items:center;padding:0 4mm;font-size:5.3mm}.training-plan .plan-columns b:nth-child(2),.training-plan .plan-columns b:nth-child(3){text-align:center}.training-plan .plan-rows{border:1.1mm solid #161616;border-radius:5mm;overflow:hidden}.training-plan .plan-row{display:grid;grid-template-columns:1fr 28mm 24mm;min-height:11mm;align-items:center;font-size:4.2mm}.training-plan .plan-row+ .plan-row{border-top:.8mm solid #161616}.training-plan .plan-row span{height:100%;display:flex;align-items:center;padding:2mm 3mm;background-image:repeating-linear-gradient(90deg,rgba(22,22,22,.6) 0 2.2mm,transparent 2.2mm 5.3mm);background-position:left calc(100% - 2.5mm);background-size:auto 0.25mm;background-repeat:repeat-x}.training-plan .plan-row span+span{border-left:.8mm solid #161616;justify-content:center;text-align:center}.training-plan .plan-footer{margin-top:auto;text-align:center;font-family:'Arial Narrow',Impact,sans-serif;font-weight:700;letter-spacing:.5mm;font-size:5.4mm;padding-top:4mm}.training-plan .plan-footer .plan-stripes{margin:4mm -12mm 1.5mm}.training-plan .plan-footer small{font-family:var(--font);font-size:2.7mm;font-weight:500;letter-spacing:0}.training-plan+.print-sheet{display:none}}
-</style>`);
-document.head.insertAdjacentHTML('beforeend',`<style id="pro-routines-grouped-ui">
-/* Lista de rutinas: una tarjeta contenedora por paciente. */
-#view-rutinas .routine-patient-groups{gap:18px}
-#view-rutinas .routine-patient-group{padding:0;border-radius:18px;background:var(--surface);overflow:visible}
-#view-rutinas .routine-patient-group-head{margin:0;padding:21px 24px 18px;gap:16px}
-#view-rutinas .routine-patient-avatar{width:56px;height:56px;border-radius:50%;font-size:17px;box-shadow:0 6px 16px rgba(20,167,154,.18)}
-#view-rutinas .routine-patient-name{font-size:19px}
-#view-rutinas .routine-patient-count{margin-top:3px}
-#view-rutinas .routine-group-head-actions{display:flex;align-items:center;gap:12px;margin-left:auto}
-#view-rutinas .routine-group-profile{display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:0 15px;background:#fff;color:var(--blue);border-color:var(--border);border-radius:10px;font-weight:700}
-#view-rutinas .routine-group-profile svg{width:17px;height:17px;stroke-width:2}
-#view-rutinas .routine-group-toggle{width:38px;height:38px;display:grid;place-items:center;border:0;background:transparent;color:var(--text);border-radius:10px;cursor:pointer}
-#view-rutinas .routine-group-toggle:hover{background:var(--blue-50);color:var(--blue)}
-#view-rutinas .routine-group-toggle svg{width:20px;height:20px;transition:transform .18s ease}
-#view-rutinas .routine-patient-group.is-collapsed .routine-patient-grid{display:none}
-#view-rutinas .routine-patient-group.is-collapsed .routine-group-toggle svg{transform:rotate(-90deg)}
-#view-rutinas .routine-patient-grid{display:block;margin:0 16px 16px;border:1px solid var(--border);border-radius:11px;background:#fff;overflow:visible}
-#view-rutinas .routine-patient-grid .routine-card{display:grid;grid-template-columns:minmax(205px,1fr) minmax(360px,1.8fr) auto;align-items:center;gap:16px;min-height:92px;margin:0;padding:18px 20px;border:0;border-radius:0;background:transparent;box-shadow:none}
-#view-rutinas .routine-patient-grid .routine-card+.routine-card{border-top:1px solid var(--border)}
-#view-rutinas .routine-patient-grid .routine-card-head{display:contents}
-#view-rutinas .routine-patient-grid .routine-card-identity{grid-column:1;display:flex;align-items:center;gap:13px;min-width:0}
-#view-rutinas .routine-patient-grid .routine-card-identity::before{content:'↔';width:35px;height:35px;flex:0 0 35px;display:grid;place-items:center;border-radius:50%;background:var(--blue-50);color:var(--blue);font-size:17px;font-weight:800}
-#view-rutinas .routine-patient-grid .routine-card-name{font-size:15px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#view-rutinas .routine-patient-grid .routine-card-patient{margin-top:3px;font-size:12px}
-#view-rutinas .routine-patient-grid .routine-card-objective{display:none}
-#view-rutinas .routine-patient-grid .routine-card-meta{grid-column:2;margin:0;display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0}
-#view-rutinas .routine-patient-grid .routine-meta-chip{min-height:31px;padding:0 10px;border-radius:8px;font-size:11.5px;white-space:nowrap;background:#f7f9fa}
-#view-rutinas .routine-patient-grid .routine-meta-chip:first-child{background:var(--blue-50);color:var(--blue);font-weight:800}
-#view-rutinas .routine-patient-grid .routine-status-slot .badge{min-height:31px;border-radius:8px;padding:0 10px;white-space:nowrap}
-#view-rutinas .routine-patient-grid .routine-card-actions{grid-column:3;margin:0;justify-content:flex-end;flex-wrap:nowrap}
-#view-rutinas .routine-patient-grid .routine-card-actions .routine-start-btn{min-width:98px;min-height:40px;border-radius:9px}
-#view-rutinas .routine-patient-grid .routine-card-actions .context>summary{width:40px;height:40px;display:grid;place-items:center;border:1px solid var(--border);border-radius:9px;background:#fff;list-style:none;cursor:pointer}
-#view-rutinas .routine-patient-grid .routine-card-actions .context>summary::-webkit-details-marker{display:none}
-#view-rutinas .routine-patient-grid .routine-card-actions .context>summary::after{content:none}
-@media(max-width:900px){#view-rutinas .routine-patient-grid .routine-card{grid-template-columns:minmax(180px,1fr) minmax(250px,1.2fr) auto;padding:16px}.routine-patient-grid .routine-meta-chip{padding:0 8px!important}}
-@media(max-width:700px){#view-rutinas .routine-patient-group-head{padding:16px}.routine-patient-avatar{width:46px!important;height:46px!important;font-size:15px!important}.routine-patient-name{font-size:17px!important}.routine-group-profile{font-size:0;padding:0!important;width:40px}.routine-group-profile svg{width:18px!important;height:18px!important}.routine-patient-grid{margin:0 10px 10px!important}.routine-patient-grid .routine-card{grid-template-columns:minmax(0,1fr) auto!important;gap:12px!important;padding:15px!important}.routine-patient-grid .routine-card-identity{grid-column:1!important}.routine-patient-grid .routine-card-meta{grid-column:1 / -1!important;grid-row:2;margin-top:2px!important}.routine-patient-grid .routine-card-actions{grid-column:2!important;grid-row:1}.routine-patient-grid .routine-card-actions .routine-start-btn{min-width:76px;padding:0 10px}.routine-patient-grid .routine-card-identity::before{width:31px!important;height:31px!important;flex-basis:31px!important}}
-</style>`);
-document.head.insertAdjacentHTML('beforeend',`<style id="pro-plan-print-fix">
-@media print{
-  @page{size:A4 portrait;margin:0}
-  #printArea,.training-plan{width:100%!important;margin:0!important;padding:0!important;background:#fff!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-  .training-plan .plan-page{box-sizing:border-box;width:100%!important;max-width:210mm;min-height:297mm;margin:0 auto;padding:10mm 12mm 8mm;overflow:hidden;background:#fff!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-  .training-plan .plan-head{box-sizing:border-box;grid-template-columns:minmax(0,1fr) 70mm;grid-template-rows:30mm 24mm;gap:5mm 4mm;padding-top:12mm;min-width:0}
-  .training-plan .plan-head>.plan-stripes{left:-12mm;right:-12mm;top:0;height:7mm;background:repeating-linear-gradient(118deg,transparent 0 7mm,#d2d4d3 7mm 9.6mm,transparent 9.6mm 14.5mm)!important}
-  .training-plan .plan-brand{font-size:15mm;letter-spacing:.8mm;min-width:0}
-  .training-plan .plan-brand em{font-size:8.7mm;letter-spacing:2.1mm;margin-left:2mm}
-  .training-plan .plan-swoosh{width:38mm;top:9.5mm}
-  .training-plan .plan-title{box-sizing:border-box;max-width:70mm;min-width:0;font-size:9.5mm;line-height:.92;letter-spacing:-.18mm;white-space:nowrap;overflow:visible}
-  .training-plan .plan-patient,.training-plan .plan-date{box-sizing:border-box;border:0!important;border-radius:7mm!important;padding:5mm 5.5mm!important;background:#b9dfdc!important;font-size:5.1mm!important;line-height:1.75!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-  .training-plan .plan-date{background:#dcefed!important;display:flex;align-items:center;gap:1.5mm;white-space:nowrap}
-  .training-plan .plan-patient span,.training-plan .plan-date span{border-bottom:.25mm dotted #565656;padding-left:1.5mm}
-  .training-plan .plan-days{margin-top:8mm}
-  .training-plan .plan-day{grid-template-columns:10mm minmax(0,1fr);margin-bottom:9mm}
-  .training-plan .plan-columns{grid-template-columns:minmax(0,1fr) 28mm 24mm;min-height:9mm;padding:0 4.5mm;font-size:5.1mm}
-  .training-plan .plan-rows{border:1mm solid #161616!important;border-radius:5.5mm!important;overflow:hidden}
-  .training-plan .plan-row{position:relative;grid-template-columns:minmax(0,1fr) 28mm 24mm;min-height:13mm;font-size:4.2mm}
-  .training-plan .plan-row+.plan-row{border-top:0!important}
-  .training-plan .plan-row:not(:last-child)::after{content:'';position:absolute;left:3mm;right:3mm;bottom:2.2mm;border-bottom:.3mm dashed #777;pointer-events:none}
-  .training-plan .plan-row span{box-sizing:border-box;min-width:0;padding:2.2mm 3mm;background:none!important}
-  .training-plan .plan-row span+span{border-left:.35mm solid #414141!important;justify-content:center;text-align:center}
-  .training-plan .plan-footer{padding-top:5mm;font-size:5.1mm;line-height:1.15}
-  .training-plan .plan-footer .plan-stripes{height:7mm;margin:4mm -12mm 1.5mm;background:repeating-linear-gradient(118deg,transparent 0 7mm,#d2d4d3 7mm 9.6mm,transparent 9.6mm 14.5mm)!important}
-  .training-plan .plan-footer small{font-size:2.65mm}
-}
 </style>`);
 </script>
 </body>
