@@ -6,9 +6,8 @@
 <title>PRO Kinesio | Panel de gimnasio</title>
 <meta name="theme-color" content="#14A79A"/>
 <meta name="application-name" content="PRO Kinesio"/>
-<link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png"/>
-<link rel="icon" type="image/png" sizes="192x192" href="assets/pro-kinesio-icon-192.png"/>
-<link rel="apple-touch-icon" sizes="180x180" href="assets/pro-kinesio-icon-180.png"/>
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png?v=2"/>
+<link rel="shortcut icon" type="image/png" href="favicon-32.png?v=2"/>
 <link rel="manifest" href="manifest.webmanifest"/>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
@@ -56,6 +55,11 @@
 *{box-sizing:border-box;margin:0;padding:0}
 html{font-size:15px;scroll-behavior:smooth}
 body{font-family:var(--font);background:var(--bg);color:var(--text);line-height:1.55;min-height:100vh;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+body:not(.authenticated) .app,body:not(.authenticated) .overlay,body:not(.authenticated) .modal,body:not(.authenticated) .toast{display:none!important}
+.login-screen{position:fixed;inset:0;z-index:200;display:grid;place-items:center;padding:24px;background:linear-gradient(135deg,#eef9f8,#f7fbfb 48%,#e8f5f3)}
+body.authenticated .login-screen{display:none}
+.login-card{width:min(420px,100%);padding:36px;border:1px solid #d7eae7;border-radius:24px;background:#fff;box-shadow:0 24px 60px rgba(11,75,70,.14)}
+.login-logo{width:182px;height:66px;margin:0 auto 26px;background:url('assets/pro-kinesio-logo.png') center/contain no-repeat}.login-card h1{text-align:center;font-size:25px;letter-spacing:-.7px}.login-card p{text-align:center;color:var(--text-2);font-size:13px;margin:6px 0 24px}.login-card .field{margin-top:14px}.login-card .input{height:48px}.login-card .btn{width:100%;min-height:48px;margin-top:22px}.login-error{min-height:20px;color:var(--red);font-size:12px;text-align:center;margin-top:10px}
 button,input,select,textarea{font:inherit}
 button{cursor:pointer}
 a{color:inherit;text-decoration:none}
@@ -4124,6 +4128,14 @@ body.modal-open{overflow:hidden}
 @media(max-width:780px){.modal.student-modal{width:calc(100vw - 16px);border-radius:18px}.student-modal .modal-head{min-height:76px;padding:15px 18px}.student-modal .modal-title{gap:12px;font-size:21px}.student-modal .modal-title::before{width:74px;height:32px;padding-right:12px}.student-modal .modal-close{width:40px;height:40px;font-size:25px}.student-modal .modal-body{padding:18px}.student-form{grid-template-columns:1fr;gap:14px}.student-form .field.full{grid-column:auto}.student-form .student-form-secondary{grid-column:auto;grid-template-columns:1fr;gap:14px}.student-form .field label{font-size:13px}.student-modal .modal-footer{padding:13px 18px}.student-modal .modal-footer .btn{flex:1;min-width:0}}
 </style>
 <body>
+<section class="login-screen" id="loginScreen" aria-label="Inicio de sesión">
+  <form class="login-card" id="loginForm">
+    <div class="login-logo" aria-hidden="true"></div><h1>Acceso al panel</h1><p>Ingresá con tu usuario y contraseña.</p>
+    <div class="field"><label for="loginUsername">Usuario</label><input class="input" id="loginUsername" name="usuario" autocomplete="username" required></div>
+    <div class="field"><label for="loginPassword">Contraseña</label><input class="input" id="loginPassword" name="password" type="password" autocomplete="current-password" required></div>
+    <button class="btn btn-primary" type="submit">Ingresar</button><div class="login-error" id="loginError" role="alert"></div>
+  </form>
+</section>
 <div class="app">
   <aside class="sidebar" id="sidebar">
     <button class="sidebar-collapse-btn" id="sidebarCollapseBtn" type="button" aria-label="Plegar barra lateral" title="Plegar barra lateral">
@@ -4138,7 +4150,7 @@ body.modal-open{overflow:hidden}
       <span class="brand-pill"><span class="brand-pill-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6.5 12h3l1.35-2.4 2.3 4.8 1.35-2.4h3" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M8.5 3.5h7a2 2 0 0 1 2 2v1h1a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-1v1a2 2 0 0 1-2 2h-7a2 2 0 0 1-2-2v-1h-1a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h1v-1a2 2 0 0 1 2-2Z" fill="none" stroke="currentColor" stroke-width="1.7"/></svg></span>Panel de gimnasio</span>
     </div>
     <nav class="nav-group" id="nav"></nav>
-    <div class="sidebar-footer"><div class="avatar">GY</div><div class="sf-info"><div class="sf-name" id="sfProName">Profesor/a</div><div class="sf-role">Entrenamiento</div></div></div>
+    <div class="sidebar-footer"><div class="avatar" id="sessionAvatar">PK</div><div class="sf-info"><div class="sf-name" id="sfProName">Usuario</div><div class="sf-role" id="sfRole">Sesión</div></div><button class="btn btn-sm" data-action="logout" title="Cerrar sesión">Salir</button></div>
   </aside>
   <div class="overlay" id="mobileOverlay"></div>
   <div class="content">
@@ -4155,6 +4167,8 @@ body.modal-open{overflow:hidden}
       <section class="view active" id="view-inicio"></section>
       <section class="view" id="view-alumnos"></section>
       <section class="view" id="view-agenda"></section>
+      <section class="view" id="view-asistencia"></section>
+      <section class="view" id="view-profesores"></section>
       <section class="view" id="view-rutinas"></section>
       <section class="view" id="view-evoluciones"></section>
       <section class="view" id="view-pagos"></section>
@@ -4181,6 +4195,7 @@ body.modal-open{overflow:hidden}
    ============================================================ */
 
 const STORAGE_KEY = "gimnasio.panel.v1";
+const SESSION_KEY = "gimnasio.panel.session.v1";
 
 /* ---------- utilidades ---------- */
 const $=(s,c=document)=>c.querySelector(s);
@@ -4244,7 +4259,7 @@ function defaultData(){
     {id:uid('abono'),studentId:s3,tipo:'2',price:13000,dias:['tuesday','thursday'],slotId:slotA,fechaInicio:addDaysISO(today,-27),fechaVencimiento:addDaysISO(today,3),estado:'Activo',createdAt:addDaysISO(today,-27)}
   ];
   const payments=abonos.map(a=>({id:uid('pago'),studentId:a.studentId,abonoId:a.id,monto:a.price,fecha:a.fechaInicio,metodo:'Efectivo'}));
-  return {config,students,abonos,payments,attendance:[],routines:[],evolutions:[]};
+  return {config,students,abonos,payments,attendance:[],routines:[],evolutions:[],clases:[],usuarios:[{id:'usr_admin',nombre:'Administrador general',usuario:'admin',password:'admin123',rol:'admin'}]};
 }
 let data=loadData();
 function loadData(){
@@ -4258,6 +4273,9 @@ function loadData(){
     parsed.attendance=parsed.attendance||[];
     parsed.routines=parsed.routines||[];
     parsed.evolutions=parsed.evolutions||[];
+    parsed.clases=parsed.clases||[];
+    parsed.usuarios=parsed.usuarios||[{id:'usr_admin',nombre:'Administrador general',usuario:'admin',password:'admin123',rol:'admin'}];
+    if(!parsed.usuarios.some(u=>u.rol==='admin'))parsed.usuarios.unshift({id:'usr_admin',nombre:'Administrador general',usuario:'admin',password:'admin123',rol:'admin'});
     return parsed;
   }catch(e){console.warn('No se pudo leer el almacenamiento local',e);return defaultData()}
 }
@@ -4269,6 +4287,12 @@ function saveData(){
 /* ---------- helpers de dominio ---------- */
 function getStudent(id){return data.students.find(s=>s.id===id)||null}
 function getSlot(id){return data.config.slots.find(s=>s.id===id)||null}
+function getUser(id){return data.usuarios.find(u=>u.id===id)||null}
+function isAdmin(){return ui.session?.rol==='admin'}
+function canAccess(section){return isAdmin()||['inicio','agenda','asistencia'].includes(section)}
+function assignedClass(date,slotId){return data.clases.find(c=>c.fecha===date&&c.slotId===slotId)||null}
+function classProfessorId(date,slotId){return assignedClass(date,slotId)?.profesorId||''}
+function professorClassesForDate(date,userId){return slotsForDate(date).filter(slot=>classProfessorId(date,slot.id)===userId)}
 function studentAbonos(studentId){return data.abonos.filter(a=>a.studentId===studentId).sort((a,b)=>b.fechaInicio.localeCompare(a.fechaInicio))}
 function currentAbono(studentId){return studentAbonos(studentId)[0]||null}
 function abonoStatus(abono){
@@ -4301,6 +4325,7 @@ function studentsForSlot(dateISO,slotId){
 }
 function attendanceRecord(studentId,dateISO,slotId){return data.attendance.find(a=>a.studentId===studentId&&a.fecha===dateISO&&a.slotId===slotId)||null}
 function setAttendance(studentId,dateISO,slotId,presente){
+  if(!isAdmin()&&classProfessorId(dateISO,slotId)!==ui.session?.id)return toast('No tenés permiso para esta clase','error');
   const existing=attendanceRecord(studentId,dateISO,slotId);
   if(existing){existing.presente=presente}
   else{data.attendance.push({id:uid('asis'),studentId,fecha:dateISO,slotId,presente})}
@@ -4308,21 +4333,23 @@ function setAttendance(studentId,dateISO,slotId,presente){
 }
 
 /* ---------- navegación ---------- */
-const SECTIONS=[['inicio','Inicio'],['alumnos','Alumnos'],['agenda','Agenda'],['rutinas','Rutinas'],['evoluciones','Evoluciones'],['pagos','Pagos'],['configuracion','Configuración']];
+const SECTIONS=[['inicio','Inicio'],['alumnos','Alumnos'],['agenda','Agenda'],['asistencia','Asistencia'],['rutinas','Rutinas'],['evoluciones','Evoluciones'],['pagos','Pagos'],['profesores','Profesores y roles'],['configuracion','Configuración']];
 const NAV_ICONS={
   inicio:'<path d="M4 11.5 12 4l8 7.5"/><path d="M6 10v9a1 1 0 0 0 1 1h3v-6h4v6h3a1 1 0 0 0 1-1v-9"/>',
   alumnos:'<circle cx="9" cy="8" r="3.2"/><path d="M3.5 20a5.5 5.5 0 0 1 11 0"/><circle cx="17" cy="9" r="2.6"/><path d="M15 20a4.2 4.2 0 0 1 6.6-3.4"/>',
   agenda:'<rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M8 3v4M16 3v4M3.5 10h17"/>',
+  asistencia:'<path d="M9 12.5 11 14.5l4-5"/><circle cx="12" cy="12" r="8.5"/>',
+  profesores:'<circle cx="9" cy="8" r="3"/><path d="M3.5 20a5.5 5.5 0 0 1 11 0"/><circle cx="17.5" cy="9" r="2.5"/><path d="M15.5 20a4.3 4.3 0 0 1 5-3.8"/>',
   rutinas:'<path d="M6.5 12h3l1.35-2.4 2.3 4.8 1.35-2.4h3"/><path d="M4 12H2M22 12h-2M6 8V6M18 8V6M6 18v-2M18 18v-2"/>',
   evoluciones:'<path d="M4 19.5V6a2 2 0 0 1 2-2h9l5 5v10.5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2Z"/><path d="M14 4v5h5M8 13h8M8 17h5"/>',
   pagos:'<rect x="3" y="6" width="18" height="12" rx="2"/><path d="M3 10h18"/><path d="M7 15h3"/>',
   configuracion:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/>'
 };
 function navIconSvg(id){return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${NAV_ICONS[id]||''}</svg>`}
-function navInit(){$('#nav').innerHTML=SECTIONS.map(([id,label])=>`<button class="nav-btn ${id==='inicio'?'active':''}" data-view="${id}" type="button" title="${label}"><span class="nav-icon" aria-hidden="true">${navIconSvg(id)}</span><span class="nav-text">${label}</span></button>`).join('')}
-const ui={view:'inicio',alumnoSearch:'',selectedStudentId:'',studentProfileTab:'datos',agendaMode:'day',agendaDate:todayISO(),routineStudentId:'',evolutionStudentId:'',paymentFilter:'Todos',modalReturnFocus:null};
+function navInit(){$('#nav').innerHTML=SECTIONS.filter(([id])=>canAccess(id)).map(([id,label])=>`<button class="nav-btn ${id==='inicio'?'active':''}" data-view="${id}" type="button" title="${label}"><span class="nav-icon" aria-hidden="true">${navIconSvg(id)}</span><span class="nav-text">${label}</span></button>`).join('')}
+const ui={view:'inicio',alumnoSearch:'',selectedStudentId:'',studentProfileTab:'datos',agendaMode:'day',agendaDate:todayISO(),routineStudentId:'',evolutionStudentId:'',paymentFilter:'Todos',modalReturnFocus:null,session:null};
 function setView(id){
-  if(!SECTIONS.some(s=>s[0]===id))return;
+  if(!SECTIONS.some(s=>s[0]===id)||!canAccess(id))return;
   ui.view=id;
   $$('.view').forEach(v=>v.classList.toggle('active',v.id===`view-${id}`));
   $$('[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===id));
@@ -4331,7 +4358,8 @@ function setView(id){
   renderCurrentView();
 }
 function renderCurrentView(){
-  const renderer={inicio:renderInicio,alumnos:renderAlumnos,agenda:renderAgenda,rutinas:renderRutinas,evoluciones:renderEvoluciones,pagos:renderPagos,configuracion:renderConfiguracion}[ui.view]||renderInicio;
+  if(!canAccess(ui.view)){ui.view='inicio'}
+  const renderer={inicio:renderInicio,alumnos:renderAlumnos,agenda:renderAgenda,asistencia:renderAsistencia,rutinas:renderRutinas,evoluciones:renderEvoluciones,pagos:renderPagos,profesores:renderProfesores,configuracion:renderConfiguracion}[ui.view]||renderInicio;
   try{renderer()}catch(err){console.error(`Render falló [${ui.view}]`,err);toast('No se pudo actualizar esta sección','error')}
 }
 function renderAll(){renderCurrentView()}
@@ -4367,6 +4395,31 @@ function openConfirm(title,description,action,label='Eliminar'){
 }
 function closeConfirm(){$('#confirmModal').classList.remove('open');if(!$('#appModal').classList.contains('open'))$('#modalOverlay').classList.remove('open');confirmAction=null}
 
+/* ---------- sesión y permisos ---------- */
+function updateSessionUI(){
+  const u=ui.session;if(!u)return;
+  $('#sfProName').textContent=u.nombre;
+  $('#sfRole').textContent=u.rol==='admin'?'Administrador':'Profesor';
+  $('#sessionAvatar').textContent=(u.nombre||'PK').split(/\s+/).slice(0,2).map(p=>p[0]).join('').toUpperCase();
+}
+function startSession(user){
+  ui.session={id:user.id,nombre:user.nombre,rol:user.rol};
+  localStorage.setItem(SESSION_KEY,JSON.stringify({userId:user.id}));
+  document.body.classList.add('authenticated');navInit();updateSessionUI();setView('inicio');
+}
+function login(event){
+  event.preventDefault();const fd=new FormData($('#loginForm'));const usuario=String(fd.get('usuario')||'').trim(),password=String(fd.get('password')||'');
+  const user=data.usuarios.find(u=>u.usuario.toLowerCase()===usuario.toLowerCase()&&u.password===password);
+  if(!user){$('#loginError').textContent='Usuario o contraseña incorrectos.';return}
+  $('#loginError').textContent='';startSession(user);
+}
+function logout(){
+  localStorage.removeItem(SESSION_KEY);ui.session=null;ui.view='inicio';closeModal();closeConfirm();document.body.classList.remove('authenticated');$('#loginForm')?.reset();$('#loginUsername')?.focus();
+}
+function restoreSession(){
+  try{const saved=JSON.parse(localStorage.getItem(SESSION_KEY)||'null');const user=saved?.userId&&getUser(saved.userId);if(user)startSession(user)}catch(e){localStorage.removeItem(SESSION_KEY)}
+}
+
 /* ---------- sidebar móvil ---------- */
 function openMenu(){$('#sidebar')?.classList.add('open');$('#mobileOverlay')?.classList.add('open')}
 function closeMenu(){$('#sidebar')?.classList.remove('open');$('#mobileOverlay')?.classList.remove('open')}
@@ -4380,9 +4433,10 @@ function toggleSidebar(){
 
 /* ======================= INICIO ======================= */
 function renderInicio(){
+  const admin=isAdmin();
   const today=todayISO();
   const activeStudents=data.students.filter(s=>s.estado!=='Inactivo');
-  const todaySlots=slotsForDate(today);
+  const todaySlots=admin?slotsForDate(today):professorClassesForDate(today,ui.session.id);
   const classesToday=todaySlots.length;
   const soonToExpire=data.students.filter(s=>{const st=abonoStatus(currentAbono(s.id));return st.label==='Por vencer'||st.label==='Vencido'}).length;
   const monthIncome=data.payments.filter(p=>sameMonth(p.fecha,today)).reduce((sum,p)=>sum+Number(p.monto||0),0);
@@ -4391,14 +4445,13 @@ function renderInicio(){
     return `<div class="item"><span class="item-time">${slot.start}</span><div class="item-main"><strong>${slot.start} – ${slot.end}</strong><span>${students.length?students.map(s=>esc(s.nombre)).join(', '):'Sin alumnos anotados'}</span></div><div class="item-right"><span class="badge b-blue">${students.length} alumno(s)</span></div></div>`;
   }).join(''):'<div class="empty">El gimnasio no abre hoy según la configuración</div>';
   $('#view-inicio').innerHTML=`
-    <div class="page-header"><div class="page-header-left"><h2>${esc(data.config.gymName||'Panel de gimnasio')}</h2><p>Resumen operativo del ${fmtDate(today)}</p></div><button class="btn btn-primary" data-action="new-student">+ Nuevo alumno</button></div>
+    <div class="page-header"><div class="page-header-left"><h2>${esc(data.config.gymName||'Panel de gimnasio')}</h2><p>Resumen operativo del ${fmtDate(today)}</p></div>${admin?'<button class="btn btn-primary" data-action="new-student">+ Nuevo alumno</button>':''}</div>
     <div class="grid metrics">
-      <div class="card metric"><small style="color:var(--muted);font-size:11px;text-transform:uppercase;font-weight:700">Alumnos activos</small><div style="font-size:28px;font-weight:700;margin-top:8px">${activeStudents.length}</div></div>
+      ${admin?`<div class="card metric"><small style="color:var(--muted);font-size:11px;text-transform:uppercase;font-weight:700">Alumnos activos</small><div style="font-size:28px;font-weight:700;margin-top:8px">${activeStudents.length}</div></div>`:''}
       <div class="card metric"><small style="color:var(--muted);font-size:11px;text-transform:uppercase;font-weight:700">Clases hoy</small><div style="font-size:28px;font-weight:700;margin-top:8px">${classesToday}</div></div>
-      <div class="card metric"><small style="color:var(--muted);font-size:11px;text-transform:uppercase;font-weight:700">Abonos por vencer / vencidos</small><div style="font-size:28px;font-weight:700;margin-top:8px">${soonToExpire}</div></div>
-      <div class="card metric"><small style="color:var(--muted);font-size:11px;text-transform:uppercase;font-weight:700">Ingresos del mes</small><div style="font-size:24px;font-weight:700;margin-top:8px">${money(monthIncome)}</div></div>
+      ${admin?`<div class="card metric"><small style="color:var(--muted);font-size:11px;text-transform:uppercase;font-weight:700">Abonos por vencer / vencidos</small><div style="font-size:28px;font-weight:700;margin-top:8px">${soonToExpire}</div></div><div class="card metric"><small style="color:var(--muted);font-size:11px;text-transform:uppercase;font-weight:700">Ingresos del mes</small><div style="font-size:24px;font-weight:700;margin-top:8px">${money(monthIncome)}</div></div>`:''}
     </div>
-    <div class="card" style="margin-top:16px">
+    ${admin?`<div class="card" style="margin-top:16px">
       <div class="card-head"><div><div class="card-title">Agenda de hoy</div><div class="card-sub">Franjas horarias y alumnos anotados</div></div><button class="btn btn-sm" data-action="goto-agenda">Ver agenda completa</button></div>
       <div class="list">${agendaHtml}</div>
     </div>
@@ -4410,7 +4463,7 @@ function renderInicio(){
         <button class="quick-btn" data-action="goto-pagos"><span class="quick-icon">💳</span>Pagos</button>
         <button class="quick-btn" data-action="goto-config"><span class="quick-icon">⚙️</span>Configuración</button>
       </div>
-    </div>`;
+    </div>`:''}`;
 }
 
 /* ======================= ALUMNOS ======================= */
@@ -4450,6 +4503,7 @@ function studentFormFields(s={}){
   const current=currentAbono(s.id||'');
   const selectedPack=String(s.packMensual||current?.tipo||'');
   const selectedSlot=s.horarioPreferidoId||current?.slotId||'';
+  const selectedDays=s.diasPreferidos||current?.dias||[];
   const slots=data.config.slots.slice().sort((a,b)=>a.start.localeCompare(b.start));
   const icon={person:'<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"/><path d="M5 20a7 7 0 0 1 14 0"/></svg>',phone:'<svg viewBox="0 0 24 24"><path d="M7.2 3.8 5.6 5.1c-1.1.9-.8 3.3.8 6.2 1.7 3 4.3 5.6 7.3 7.3 2.9 1.6 5.3 1.9 6.2.8l1.3-1.6-3.1-3.1-2.2 1.3c-1.7-.9-3.1-2.3-4-4l1.3-2.2-3.1-3.1Z"/></svg>',mail:'<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m4 7 8 6 8-6"/></svg>',calendar:'<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4M17 3v4M3 10h18M8 14h.01M12 14h.01M16 14h.01"/></svg>',target:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="1"/></svg>',pack:'<svg viewBox="0 0 24 24"><path d="M12 3 4 7.5 12 12l8-4.5L12 3Z"/><path d="m4 12 8 4.5 8-4.5M4 16.5l8 4.5 8-4.5"/></svg>',clock:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3.5 2"/></svg>'};
   return `<div class="student-form">
@@ -4461,13 +4515,22 @@ function studentFormFields(s={}){
     <div class="student-form-secondary">
       <div class="student-form-panel"><div class="student-form-panel-title">Plan y abono</div><div class="field"><label>Pack mensual</label><select class="select" name="packMensual" required><option value="" ${!selectedPack?'selected':''} disabled>Seleccionar pack</option>${ABONO_TYPES.map(t=>`<option value="${t.id}" ${t.id===selectedPack?'selected':''}>${t.label}</option>`).join('')}</select><span class="field-icon">${icon.pack}</span></div></div>
       <div class="student-form-panel"><div class="student-form-panel-title">Horario</div><div class="field"><label>Horario fijo</label><select class="select" name="horarioPreferidoId" required><option value="" ${!selectedSlot?'selected':''} disabled>Seleccionar horario</option>${slots.map(sl=>`<option value="${sl.id}" ${sl.id===selectedSlot?'selected':''}>${sl.start} – ${sl.end}</option>`).join('')}</select><span class="field-icon">${icon.clock}</span></div></div>
+      <div class="student-form-panel" style="grid-column:1/-1"><div class="student-form-panel-title">Días de entrenamiento</div><div class="card-sub" id="studentDaysHint" style="margin:-6px 0 12px">Elegí los días según el pack mensual.</div><div class="chips" id="studentDaysChips">${DAYS.map(d=>`<button type="button" class="chip ${selectedDays.includes(d.key)?'active':''}" data-day="${d.key}">${d.label}</button>`).join('')}</div></div>
     </div>
   </div>`;
+}
+function bindStudentDayChips(){
+  const pack=$('[name="packMensual"]');const hint=$('#studentDaysHint');
+  const sync=()=>{const type=ABONO_TYPES.find(t=>t.id===String(pack?.value));if(hint)hint.textContent=type?`Elegí exactamente ${type.dias} día(s) de entrenamiento.`:'Primero seleccioná el pack mensual.';const active=$$('#studentDaysChips .chip.active');if(type&&active.length>type.dias)active.slice(type.dias).forEach(c=>c.classList.remove('active'))};
+  pack?.addEventListener('change',sync);
+  $$('#studentDaysChips .chip').forEach(chip=>chip.addEventListener('click',()=>{const type=ABONO_TYPES.find(t=>t.id===String(pack?.value));if(!type)return toast('Seleccioná primero el pack mensual','warn');if(!chip.classList.contains('active')&&$$('#studentDaysChips .chip.active').length>=type.dias)return toast(`Este pack permite ${type.dias} día(s)`,'warn');chip.classList.toggle('active')}));
+  sync();
 }
 function openNewStudent(){
   openModal('Nuevo alumno',`<form id="studentForm">${studentFormFields()}</form>`,
     `<button class="btn" data-action="close-modal">Cancelar</button><button class="btn btn-success" data-action="save-new-student">Guardar alumno</button>`);
   $('#appModal').classList.add('student-modal');
+  bindStudentDayChips();
 }
 function saveNewStudent(){
   const form=$('#studentForm');if(!form)return;
@@ -4476,7 +4539,8 @@ function saveNewStudent(){
   if(!nombre)return toast('El nombre es obligatorio','error');
   if(!fd.get('packMensual'))return toast('Seleccioná el pack mensual','error');
   if(!fd.get('horarioPreferidoId'))return toast('Seleccioná el horario fijo','error');
-  const student={id:uid('stu'),nombre,telefono:fd.get('telefono')||'',email:fd.get('email')||'',fechaAlta:fd.get('fechaAlta')||todayISO(),objetivo:fd.get('objetivo')||'',notas:'',estado:'Activo',packMensual:fd.get('packMensual')||'',horarioPreferidoId:fd.get('horarioPreferidoId')||''};
+  const diasPreferidos=$$('#studentDaysChips .chip.active').map(c=>c.dataset.day);const pack=ABONO_TYPES.find(t=>t.id===String(fd.get('packMensual')));if(diasPreferidos.length!==pack?.dias)return toast(`Elegí exactamente ${pack?.dias||0} día(s) de entrenamiento`,'error');
+  const student={id:uid('stu'),nombre,telefono:fd.get('telefono')||'',email:fd.get('email')||'',fechaAlta:fd.get('fechaAlta')||todayISO(),objetivo:fd.get('objetivo')||'',notas:'',estado:'Activo',packMensual:fd.get('packMensual')||'',horarioPreferidoId:fd.get('horarioPreferidoId')||'',diasPreferidos};
   data.students.push(student);saveData();closeModal();renderAll();toast('Alumno creado');
 }
 function openEditStudent(id){
@@ -4484,6 +4548,7 @@ function openEditStudent(id){
   openModal('Editar alumno',`<form id="studentForm">${studentFormFields(s)}</form>`,
     `<button class="btn" data-action="close-modal">Cancelar</button><button class="btn btn-success" data-action="save-edit-student" data-id="${id}">Guardar cambios</button>`);
   $('#appModal').classList.add('student-modal');
+  bindStudentDayChips();
 }
 function saveEditStudent(id){
   const s=getStudent(id);if(!s)return;
@@ -4492,7 +4557,8 @@ function saveEditStudent(id){
   if(!nombre)return toast('El nombre es obligatorio','error');
   if(!fd.get('packMensual'))return toast('Seleccioná el pack mensual','error');
   if(!fd.get('horarioPreferidoId'))return toast('Seleccioná el horario fijo','error');
-  Object.assign(s,{nombre,telefono:fd.get('telefono')||'',email:fd.get('email')||'',fechaAlta:fd.get('fechaAlta')||s.fechaAlta,objetivo:fd.get('objetivo')||'',estado:'Activo',packMensual:fd.get('packMensual')||'',horarioPreferidoId:fd.get('horarioPreferidoId')||''});
+  const diasPreferidos=$$('#studentDaysChips .chip.active').map(c=>c.dataset.day);const pack=ABONO_TYPES.find(t=>t.id===String(fd.get('packMensual')));if(diasPreferidos.length!==pack?.dias)return toast(`Elegí exactamente ${pack?.dias||0} día(s) de entrenamiento`,'error');
+  Object.assign(s,{nombre,telefono:fd.get('telefono')||'',email:fd.get('email')||'',fechaAlta:fd.get('fechaAlta')||s.fechaAlta,objetivo:fd.get('objetivo')||'',estado:'Activo',packMensual:fd.get('packMensual')||'',horarioPreferidoId:fd.get('horarioPreferidoId')||'',diasPreferidos});
   saveData();closeModal();renderAll();toast('Alumno actualizado');
 }
 function deleteStudentFlow(id){
@@ -4536,6 +4602,7 @@ function studentProfileSection(s){
       <div class="clinical-block"><h4>Fecha de alta</h4><p>${fmtDate(s.fechaAlta)}</p></div>
       <div class="clinical-block"><h4>Pack mensual</h4><p>${preferredPack?abonoTypeLabel(preferredPack):'Sin seleccionar'}</p></div>
       <div class="clinical-block"><h4>Horario fijo</h4><p>${preferredSlot?`${preferredSlot.start} – ${preferredSlot.end}`:'Sin seleccionar'}</p></div>
+      <div class="clinical-block"><h4>Días elegidos</h4><p>${(s.diasPreferidos||assignedAbono?.dias||[]).map(dayLabel).join(', ')||'Sin seleccionar'}</p></div>
       <div class="clinical-block" style="grid-column:1/-1"><h4>Notas</h4><p>${esc(s.notas||'Sin notas')}</p></div>
     </div>`;
   }
@@ -4596,6 +4663,7 @@ function saveAbono(studentId){
   const metodo=fd.get('metodo')||'Efectivo';
   const abono={id:uid('abono'),studentId,tipo,price,dias,slotId,fechaInicio,fechaVencimiento,estado:'Activo',createdAt:todayISO()};
   data.abonos.push(abono);
+  Object.assign(s,{packMensual:tipo,horarioPreferidoId:slotId,diasPreferidos:dias});
   data.payments.push({id:uid('pago'),studentId,abonoId:abono.id,monto:price,fecha:fechaInicio,metodo});
   saveData();closeModal();
   if(ui.view==='pagos')renderPagos();else if($('#appModal').classList.contains('open'))renderStudentProfile();else renderAll();
@@ -4613,35 +4681,53 @@ function renderAgenda(){
 }
 function renderAgendaBody(){
   const el=$('#agendaBody');if(!el)return;
+  const admin=isAdmin(),myId=ui.session?.id;
   if(ui.agendaMode==='day'){
     const date=ui.agendaDate;
-    const slots=slotsForDate(date);
+    const slots=admin?slotsForDate(date):professorClassesForDate(date,myId);
     el.innerHTML=`<div class="card" style="margin-bottom:14px"><div class="field" style="max-width:220px"><label>Fecha</label><input class="input" type="date" id="agendaDateInput" value="${date}"></div></div>
     ${slots.length?slots.map(slot=>{
       const students=studentsForSlot(date,slot.id);
+      const professor=getUser(classProfessorId(date,slot.id));
       const rows=students.map(st=>{
         const rec=attendanceRecord(st.id,date,slot.id);
-        return `<div class="item"><div class="item-main"><strong>${esc(st.nombre)}</strong><span>${abonoTypeLabel(currentAbono(st.id)?.tipo||'')}</span></div><div class="item-right">
+        return `<div class="item"><div class="item-main"><strong>${esc(st.nombre)}</strong><span>${abonoTypeLabel(currentAbono(st.id)?.tipo||'')}</span></div>${admin?`<div class="item-right">
           <button class="btn btn-sm ${rec?.presente===true?'btn-success':''}" data-action="mark-attendance" data-student="${st.id}" data-slot="${slot.id}" data-date="${date}" data-present="true">Presente</button>
           <button class="btn btn-sm ${rec&&rec.presente===false?'btn-danger':''}" data-action="mark-attendance" data-student="${st.id}" data-slot="${slot.id}" data-date="${date}" data-present="false">Ausente</button>
-        </div></div>`;
+        </div>`:''}</div>`;
       }).join('');
-      return `<div class="card" style="margin-bottom:12px"><div class="card-head"><div><div class="card-title">${slot.start} – ${slot.end}</div><div class="card-sub">${students.length} alumno(s)${slot.capacity?` · cupo máx. ${slot.capacity}`:''}</div></div></div>${rows||'<div class="empty">Sin alumnos anotados en esta franja</div>'}</div>`;
+      const userOptions=data.usuarios.map(u=>'<option value="'+u.id+'" '+(u.id===professor?.id?'selected':'')+'>'+esc(u.nombre)+(u.rol==='admin'?' (Admin)':'')+'</option>').join('');
+      const control=admin?`<div class="field" style="min-width:230px"><label>Profesor asignado</label><select class="select" data-class-professor data-date="${date}" data-slot="${slot.id}"><option value="">Sin asignar</option>${userOptions}</select></div>`:'<span class="badge b-blue">Tu clase</span>';
+      return `<div class="card" style="margin-bottom:12px"><div class="card-head"><div><div class="card-title">${slot.start} – ${slot.end}</div><div class="card-sub">${students.length} alumno(s)${slot.capacity?` · cupo máx. ${slot.capacity}`:''}</div></div>${control}</div>${rows||'<div class="empty">Sin alumnos anotados en esta franja</div>'}</div>`;
     }).join(''):'<div class="empty">El gimnasio no abre este día según la configuración</div>'}`;
     $('#agendaDateInput')?.addEventListener('change',e=>{ui.agendaDate=e.target.value;renderAgendaBody()});
+    $$('[data-class-professor]').forEach(select=>select.addEventListener('change',()=>assignClassProfessor(select.dataset.date,select.dataset.slot,select.value)));
   }else{
     const weekStart=weekStartISO(ui.agendaDate);
     const days=DAYS.filter(d=>data.config.days[d.key]).map((d,i)=>({...d,date:addDaysISO(weekStart,DAYS.findIndex(x=>x.key===d.key))}));
-    const slots=data.config.slots.slice().sort((a,b)=>a.start.localeCompare(b.start));
+    const slots=data.config.slots.slice().sort((a,b)=>a.start.localeCompare(b.start)).filter(slot=>admin||days.some(d=>classProfessorId(d.date,slot.id)===myId));
     el.innerHTML=`<div class="card" style="margin-bottom:14px"><div class="field" style="max-width:220px"><label>Semana de referencia</label><input class="input" type="date" id="agendaWeekInput" value="${weekStart}"></div></div>
     <div class="table-wrap"><table class="table"><thead><tr><th>Franja</th>${days.map(d=>`<th>${d.short} ${fmtDate(d.date)}</th>`).join('')}</tr></thead><tbody>
     ${slots.map(slot=>`<tr><td><strong>${slot.start}–${slot.end}</strong></td>${days.map(d=>{
-      const students=studentsForSlot(d.date,slot.id);
-      return `<td><button class="btn btn-sm" data-action="agenda-goto-day" data-date="${d.date}">${students.length} alumno(s)</button></td>`;
+      const students=studentsForSlot(d.date,slot.id);const mine=admin||classProfessorId(d.date,slot.id)===myId;
+      return `<td>${mine?`<button class="btn btn-sm" data-action="agenda-goto-day" data-date="${d.date}">${students.length} alumno(s)</button>`:'—'}</td>`;
     }).join('')}</tr>`).join('')}
     </tbody></table></div>`;
     $('#agendaWeekInput')?.addEventListener('change',e=>{ui.agendaDate=e.target.value;renderAgendaBody()});
   }
+}
+
+function assignClassProfessor(date,slotId,profesorId){
+  if(!isAdmin())return;
+  const existing=assignedClass(date,slotId);
+  if(existing){if(profesorId)existing.profesorId=profesorId;else data.clases=data.clases.filter(c=>c.id!==existing.id)}
+  else if(profesorId)data.clases.push({id:uid('clase'),fecha:date,slotId,profesorId});
+  saveData();toast('Profesor asignado');
+}
+function renderAsistencia(){
+  const date=ui.agendaDate,slots=professorClassesForDate(date,ui.session?.id);
+  $('#view-asistencia').innerHTML=`<div class="page-header"><div class="page-header-left"><h2>Asistencia</h2><p>Clases asignadas a ${esc(ui.session?.nombre||'profesor')}</p></div></div><div class="card" style="margin-bottom:14px"><div class="field" style="max-width:220px"><label>Fecha</label><input class="input" type="date" id="attendanceDateInput" value="${date}"></div></div>${slots.map(slot=>{const students=studentsForSlot(date,slot.id);return `<div class="card" style="margin-bottom:12px"><div class="card-head"><div><div class="card-title">${slot.start} – ${slot.end}</div><div class="card-sub">${students.length} alumno(s)</div></div></div>${students.map(st=>{const rec=attendanceRecord(st.id,date,slot.id);return `<div class="item"><div class="item-main"><strong>${esc(st.nombre)}</strong></div><div class="item-right"><button class="btn btn-sm ${rec?.presente===true?'btn-success':''}" data-action="mark-attendance" data-student="${st.id}" data-slot="${slot.id}" data-date="${date}" data-present="true">Presente</button><button class="btn btn-sm ${rec?.presente===false?'btn-danger':''}" data-action="mark-attendance" data-student="${st.id}" data-slot="${slot.id}" data-date="${date}" data-present="false">Ausente</button></div></div>`}).join('')||'<div class="empty">Sin alumnos anotados</div>'}</div>`}).join('')||'<div class="empty">No tenés clases asignadas para esta fecha</div>'}`;
+  $('#attendanceDateInput')?.addEventListener('change',e=>{ui.agendaDate=e.target.value;renderAsistencia()});
 }
 
 /* ======================= RUTINAS ======================= */
@@ -4760,6 +4846,7 @@ function renderPagos(){
 
 /* ======================= CONFIGURACIÓN ======================= */
 function renderConfiguracion(){
+  if(!isAdmin()){setView('inicio');return}
   const c=data.config;
   $('#view-configuracion').innerHTML=`
     <div class="page-header"><div class="page-header-left"><h2>Configuración</h2><p>Días de apertura, franjas horarias y datos del gimnasio</p></div></div>
@@ -4783,9 +4870,10 @@ function renderConfiguracion(){
         <td><button class="btn btn-sm btn-danger" data-action="delete-slot" data-id="${slot.id}">Eliminar</button></td>
       </tr>`).join('')}
       </tbody></table></div>
-    </div>`;
-  $('#cfgGymName')?.addEventListener('change',e=>{c.gymName=e.target.value;saveData();$('#sfProName').textContent=c.proName||'Profesor/a'});
-  $('#cfgProName')?.addEventListener('change',e=>{c.proName=e.target.value;saveData();$('#sfProName').textContent=c.proName||'Profesor/a'});
+    </div>
+    <div class="card" style="margin-top:16px"><div class="card-head"><div><div class="card-title">Gestión de roles</div><div class="card-sub">Administradores y profesores con acceso al panel</div></div><button class="btn btn-primary btn-sm" data-action="manage-users">Gestionar usuarios</button></div></div>`;
+  $('#cfgGymName')?.addEventListener('change',e=>{c.gymName=e.target.value;saveData()});
+  $('#cfgProName')?.addEventListener('change',e=>{c.proName=e.target.value;saveData()});
   $$('[data-cfg-day]').forEach(input=>input.addEventListener('change',()=>{c.days[input.dataset.cfgDay]=input.checked;saveData();toast('Configuración actualizada')}));
   $$('[data-slot-field]').forEach(input=>input.addEventListener('change',()=>{
     const slot=getSlot(input.dataset.slotId);if(!slot)return;
@@ -4793,6 +4881,32 @@ function renderConfiguracion(){
     slot[field]=field==='capacity'?(input.value===''?null:Number(input.value)):input.value;
     saveData();renderConfiguracion();toast('Franja actualizada');
   }));
+}
+function renderUsersModal(){
+  const rows=data.usuarios.map(u=>`<tr><td><strong>${esc(u.nombre)}</strong></td><td>${esc(u.usuario)}</td><td><span class="badge ${u.rol==='admin'?'b-blue':'b-gray'}">${u.rol==='admin'?'Administrador':'Profesor'}</span></td><td><button class="btn btn-sm" data-action="edit-user" data-id="${u.id}">Editar</button>${u.rol==='profesor'?` <button class="btn btn-sm btn-danger" data-action="delete-user" data-id="${u.id}">Eliminar</button>`:''}${u.id===ui.session?.id?' <span class="badge b-ok">Sesión actual</span>':''}</td></tr>`).join('');
+  openModal('Gestión de roles',`<div class="billing-note" style="margin-bottom:16px">Las contraseñas se guardan sin cifrar en este navegador porque la aplicación no tiene backend. No usar credenciales sensibles reales.</div><div class="table-wrap"><table class="table"><thead><tr><th>Nombre</th><th>Usuario</th><th>Rol</th><th></th></tr></thead><tbody>${rows}</tbody></table></div><form id="userForm" style="margin-top:20px"><div class="card-title" style="margin-bottom:12px">Nuevo acceso</div><div class="form-grid"><div class="field"><label>Nombre</label><input class="input" name="nombre" required></div><div class="field"><label>Usuario</label><input class="input" name="usuario" required autocomplete="off"></div><div class="field"><label>Contraseña</label><input class="input" name="password" type="password" required autocomplete="new-password"></div><div class="field"><label>Rol</label><select class="select" name="rol"><option value="profesor">Profesor</option><option value="admin">Administrador</option></select></div></div></form>`,`<button class="btn" data-action="close-modal">Cerrar</button><button class="btn btn-success" data-action="save-user">Crear acceso</button>`,'wide');
+}
+function saveUser(){
+  if(!isAdmin())return;const fd=new FormData($('#userForm'));const nombre=String(fd.get('nombre')||'').trim(),usuario=String(fd.get('usuario')||'').trim(),password=String(fd.get('password')||''),rol=fd.get('rol')==='admin'?'admin':'profesor';
+  if(!nombre||!usuario||!password)return toast('Completá nombre, usuario y contraseña','error');
+  if(data.usuarios.some(u=>u.usuario.toLowerCase()===usuario.toLowerCase()))return toast('Ese usuario ya existe','error');
+  data.usuarios.push({id:uid('usr'),nombre,usuario,password,rol});saveData();renderUsersModal();toast('Acceso creado');
+}
+function renderProfesores(){
+  if(!isAdmin()){setView('inicio');return}
+  const admins=data.usuarios.filter(u=>u.rol==='admin').length,profes=data.usuarios.filter(u=>u.rol==='profesor').length;
+  $('#view-profesores').innerHTML=`<div class="page-header"><div class="page-header-left"><h2>Profesores y roles</h2><p>Crear accesos y administrar permisos del equipo</p></div><button class="btn btn-primary" data-action="manage-users">+ Agregar acceso</button></div><div class="grid metrics"><div class="card metric"><small style="color:var(--muted);font-size:11px;text-transform:uppercase;font-weight:700">Administradores</small><div style="font-size:28px;font-weight:700;margin-top:8px">${admins}</div></div><div class="card metric"><small style="color:var(--muted);font-size:11px;text-transform:uppercase;font-weight:700">Profesores</small><div style="font-size:28px;font-weight:700;margin-top:8px">${profes}</div></div></div><div class="card" style="margin-top:16px"><div class="card-head"><div><div class="card-title">Usuarios con acceso</div><div class="card-sub">Cada profesor accede con su usuario y contraseña.</div></div><button class="btn btn-sm" data-action="manage-users">Gestionar</button></div><div class="list">${data.usuarios.map(u=>`<div class="item"><div class="item-main"><strong>${esc(u.nombre)}</strong><span>${esc(u.usuario)}</span></div><div class="item-right"><span class="badge ${u.rol==='admin'?'b-blue':'b-gray'}">${u.rol==='admin'?'Administrador':'Profesor'}</span></div></div>`).join('')}</div></div>`;
+}
+function editUser(id){
+  const u=getUser(id);if(!isAdmin()||!u)return;
+  openModal(`Editar ${u.rol==='admin'?'administrador':'profesor'}`,`<form id="editUserForm"><div class="form-grid"><div class="field"><label>Nombre</label><input class="input" name="nombre" value="${esc(u.nombre)}" required></div><div class="field"><label>Usuario</label><input class="input" name="usuario" value="${esc(u.usuario)}" required></div><div class="field"><label>Nueva contraseña</label><input class="input" type="password" name="password" placeholder="Dejar vacía para mantener"></div></div></form>`,`<button class="btn" data-action="manage-users">Cancelar</button><button class="btn btn-success" data-action="save-edit-user" data-id="${u.id}">Guardar</button>`);
+}
+function saveEditUser(id){
+  const u=getUser(id);if(!isAdmin()||!u)return;const fd=new FormData($('#editUserForm'));const nombre=String(fd.get('nombre')||'').trim(),usuario=String(fd.get('usuario')||'').trim(),password=String(fd.get('password')||'');
+  if(!nombre||!usuario)return toast('Completá nombre y usuario','error');if(data.usuarios.some(x=>x.id!==id&&x.usuario.toLowerCase()===usuario.toLowerCase()))return toast('Ese usuario ya existe','error');Object.assign(u,{nombre,usuario});if(password)u.password=password;if(u.id===ui.session?.id){ui.session.nombre=u.nombre;updateSessionUI()}saveData();renderUsersModal();toast('Usuario actualizado');
+}
+function deleteUser(id){
+  const u=getUser(id);if(!isAdmin()||!u||u.rol!=='profesor')return;openConfirm('Eliminar profesor',`Se eliminará el acceso de ${u.nombre}. Las clases ya asignadas quedarán sin profesor.`,()=>{data.usuarios=data.usuarios.filter(x=>x.id!==id);data.clases=data.clases.filter(c=>c.profesorId!==id);saveData();closeConfirm();renderUsersModal();toast('Profesor eliminado','info')});
 }
 function addSlot(){
   data.config.slots.push({id:uid('slot'),start:'10:00',end:'11:00',capacity:null});
@@ -4812,6 +4926,8 @@ document.addEventListener('click',event=>{
   const button=event.target.closest('[data-action]');
   if(!button)return;
   const action=button.dataset.action;
+  const adminActions=['new-student','save-new-student','edit-student','save-edit-student','delete-student','open-student','student-tab','assign-abono','save-abono','new-routine-for','add-exercise-row','remove-exercise-row','save-routine','delete-routine','new-evolution-for','save-evolution','delete-evolution','payment-filter','add-slot','delete-slot','manage-users','save-user','edit-user','save-edit-user','delete-user'];
+  if(adminActions.includes(action)&&!isAdmin())return toast('Acceso restringido al administrador','error');
   switch(action){
     case 'new-student':openNewStudent();break;
     case 'save-new-student':saveNewStudent();break;
@@ -4839,6 +4955,12 @@ document.addEventListener('click',event=>{
     case 'payment-filter':ui.paymentFilter=button.dataset.filter;renderPagos();break;
     case 'add-slot':addSlot();break;
     case 'delete-slot':deleteSlot(button.dataset.id);break;
+    case 'manage-users':renderUsersModal();break;
+    case 'save-user':saveUser();break;
+    case 'edit-user':editUser(button.dataset.id);break;
+    case 'save-edit-user':saveEditUser(button.dataset.id);break;
+    case 'delete-user':deleteUser(button.dataset.id);break;
+    case 'logout':logout();break;
     case 'close-modal':closeModal();break;
     case 'cancel-confirm':closeConfirm();break;
   }
@@ -4849,11 +4971,10 @@ $('#menuBtn')?.addEventListener('click',toggleSidebar);
 $('#sidebarCollapseBtn')?.addEventListener('click',toggleSidebar);
 $('#mobileOverlay')?.addEventListener('click',closeMenu);
 $('#globalSearch')?.addEventListener('input',e=>{ui.alumnoSearch=e.target.value;if(ui.view!=='alumnos')setView('alumnos');else renderAlumnos()});
+$('#loginForm')?.addEventListener('submit',login);
 
 /* ======================= INIT ======================= */
-navInit();
-$('#sfProName').textContent=data.config.proName||'Profesor/a';
-setView('inicio');
+restoreSession();
 </script>
 </body>
 </html>
