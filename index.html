@@ -535,6 +535,15 @@ body.sidebar-collapsed .sf-info,body.sidebar-collapsed .sf-dot{display:none}
 .btn-success:hover{background:#0d7a60;border-color:#0d7a60}
 .btn-danger{background:var(--red-50);border-color:var(--red-100);color:var(--red)}
 .btn-danger:hover{background:#fbd5d5}
+.attendance-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.attendance-btn{min-width:126px;min-height:42px;display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:10px;font-weight:800;transition:transform .16s ease,box-shadow .16s ease,opacity .16s ease}
+.attendance-btn:hover{transform:translateY(-1px)}
+.attendance-btn.is-present{border-color:#0aaf67;background:#0abf70;color:#fff;box-shadow:0 6px 14px rgba(10,175,103,.2)}
+.attendance-btn.is-absent{border-color:#ef343b;background:#f2383f;color:#fff;box-shadow:0 6px 14px rgba(239,52,59,.18)}
+.attendance-btn:not(.is-selected){opacity:.78;box-shadow:none}
+.attendance-btn.is-selected{outline:3px solid rgba(10,175,103,.16);opacity:1}.attendance-btn.is-absent.is-selected{outline-color:rgba(239,52,59,.16)}
+.attendance-mark{width:20px;height:20px;display:grid;place-items:center;border-radius:50%;background:rgba(255,255,255,.22);font-size:13px;line-height:1}
+@media(max-width:780px){.attendance-actions{width:100%;display:grid;grid-template-columns:1fr 1fr}.attendance-btn{width:100%;min-width:0}}
 .btn-sm{height:30px;font-size:12px;padding:0 10px;border-radius:var(--radius-xs)}
 .btn-icon{width:30px;height:30px;padding:0;border-radius:var(--radius-xs)}
 .btn-block{width:100%}
@@ -4131,7 +4140,7 @@ body.modal-open{overflow:hidden}
 <section class="login-screen" id="loginScreen" aria-label="Inicio de sesión">
   <form class="login-card" id="loginForm">
     <div class="login-logo" aria-hidden="true"></div><h1>Acceso al panel</h1><p>Ingresá con tu usuario y contraseña.</p>
-    <div class="field"><label for="loginUsername">Usuario</label><input class="input" id="loginUsername" name="usuario" autocomplete="username" required></div>
+    <div class="field"><label for="loginUsername">Correo electrónico</label><input class="input" id="loginUsername" name="email" type="email" autocomplete="email" inputmode="email" required></div>
     <div class="field"><label for="loginPassword">Contraseña</label><input class="input" id="loginPassword" name="password" type="password" autocomplete="current-password" required></div>
     <button class="btn btn-primary" type="submit">Ingresar</button><div class="login-error" id="loginError" role="alert"></div>
   </form>
@@ -4191,11 +4200,46 @@ body.modal-open{overflow:hidden}
 "use strict";
 /* ============================================================
    PANEL DE GESTIÓN PARA GIMNASIO — variante de PRO Kinesio
-   Persistencia: localStorage (sin Firebase). Un dispositivo/navegador.
+   Datos operativos: localStorage. Autenticación: Firebase Authentication.
    ============================================================ */
 
 const STORAGE_KEY = "gimnasio.panel.v1";
 const SESSION_KEY = "gimnasio.panel.session.v1";
+
+const FIREBASE_CONFIG = window.PROKINESIO_FIREBASE_CONFIG || {
+  apiKey: "AIzaSyBkca-zmx5xcAM6DgXLsleJkzi3mVlswZE",
+  authDomain: "prokinesio-be743.firebaseapp.com",
+  projectId: "prokinesio-be743",
+  storageBucket: "prokinesio-be743.firebasestorage.app",
+  messagingSenderId: "598419896756",
+  appId: "1:598419896756:web:82c658768dd4d42f101ae1"
+};
+let firebaseAuth=null;
+let firebaseSdk=null;
+let authReadyPromise=null;
+let authStateHandled=false;
+function isFirebaseConfigured(){return Boolean(FIREBASE_CONFIG.apiKey&&FIREBASE_CONFIG.authDomain&&FIREBASE_CONFIG.projectId&&FIREBASE_CONFIG.appId)}
+function initFirebaseAuth(){
+  if(authReadyPromise)return authReadyPromise;
+  if(!isFirebaseConfigured())return authReadyPromise=Promise.reject(new Error('Firebase no está configurado'));
+  authReadyPromise=Promise.all([
+    import('https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js'),
+    import('https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js')
+  ]).then(([appSdk,authSdk])=>{
+    firebaseSdk=authSdk;
+    firebaseAuth=authSdk.getAuth(appSdk.initializeApp(FIREBASE_CONFIG));
+    authSdk.onAuthStateChanged(firebaseAuth,user=>{
+      if(!user){
+        if(authStateHandled)logoutLocal();
+        authStateHandled=true;
+        return;
+      }
+      authStateHandled=true;
+      startFirebaseSession(user);
+    });
+  });
+  return authReadyPromise;
+}
 
 /* ---------- utilidades ---------- */
 const $=(s,c=document)=>c.querySelector(s);
@@ -4259,7 +4303,7 @@ function defaultData(){
     {id:uid('abono'),studentId:s3,tipo:'2',price:13000,dias:['tuesday','thursday'],slotId:slotA,fechaInicio:addDaysISO(today,-27),fechaVencimiento:addDaysISO(today,3),estado:'Activo',createdAt:addDaysISO(today,-27)}
   ];
   const payments=abonos.map(a=>({id:uid('pago'),studentId:a.studentId,abonoId:a.id,monto:a.price,fecha:a.fechaInicio,metodo:'Efectivo'}));
-  return {config,students,abonos,payments,attendance:[],routines:[],evolutions:[],clases:[],usuarios:[{id:'usr_admin',nombre:'Administrador general',usuario:'admin',password:'admin123',rol:'admin'}]};
+  return {config,students,abonos,payments,attendance:[],routines:[],evolutions:[],clases:[],usuarios:[]};
 }
 let data=loadData();
 function loadData(){
@@ -4274,8 +4318,7 @@ function loadData(){
     parsed.routines=parsed.routines||[];
     parsed.evolutions=parsed.evolutions||[];
     parsed.clases=parsed.clases||[];
-    parsed.usuarios=parsed.usuarios||[{id:'usr_admin',nombre:'Administrador general',usuario:'admin',password:'admin123',rol:'admin'}];
-    if(!parsed.usuarios.some(u=>u.rol==='admin'))parsed.usuarios.unshift({id:'usr_admin',nombre:'Administrador general',usuario:'admin',password:'admin123',rol:'admin'});
+    parsed.usuarios=(parsed.usuarios||[]).filter(u=>u.email||String(u.usuario||'').includes('@')).map(u=>({...u,email:String(u.email||u.usuario).trim().toLowerCase(),usuario:String(u.email||u.usuario).trim().toLowerCase(),password:undefined}));
     return parsed;
   }catch(e){console.warn('No se pudo leer el almacenamiento local',e);return defaultData()}
 }
@@ -4327,18 +4370,26 @@ function attendanceRecord(studentId,dateISO,slotId){return data.attendance.find(
 function setAttendance(studentId,dateISO,slotId,presente){
   if(!isAdmin()&&classProfessorId(dateISO,slotId)!==ui.session?.id)return toast('No tenés permiso para esta clase','error');
   const existing=attendanceRecord(studentId,dateISO,slotId);
-  if(existing){existing.presente=presente}
-  else{data.attendance.push({id:uid('asis'),studentId,fecha:dateISO,slotId,presente})}
-  saveData();
+  const now=new Date().toISOString();
+  if(existing){Object.assign(existing,{presente,updatedAt:now,recordedBy:ui.session?.id||'',recordedByName:ui.session?.nombre||''})}
+  else{data.attendance.push({id:uid('asis'),studentId,fecha:dateISO,slotId,presente,recordedAt:now,updatedAt:now,recordedBy:ui.session?.id||'',recordedByName:ui.session?.nombre||''})}
+  saveData();toast(presente?'Asistencia marcada: presente':'Asistencia marcada: ausente',presente?'success':'info');
+}
+function attendanceControlsHtml(st,slotId,date,rec){
+  return `<div class="attendance-actions" aria-label="Asistencia de ${esc(st.nombre)}">
+    <button class="btn btn-sm attendance-btn is-present ${rec?.presente===true?'is-selected':''}" data-action="mark-attendance" data-student="${st.id}" data-slot="${slotId}" data-date="${date}" data-present="true"><span class="attendance-mark">✓</span>Presente</button>
+    <button class="btn btn-sm attendance-btn is-absent ${rec?.presente===false?'is-selected':''}" data-action="mark-attendance" data-student="${st.id}" data-slot="${slotId}" data-date="${date}" data-present="false"><span class="attendance-mark">×</span>Ausente</button>
+  </div>`;
 }
 
 /* ---------- navegación ---------- */
-const SECTIONS=[['inicio','Inicio'],['alumnos','Alumnos'],['agenda','Agenda'],['asistencia','Asistencia'],['rutinas','Rutinas'],['evoluciones','Evoluciones'],['pagos','Pagos'],['profesores','Profesores y roles'],['configuracion','Configuración']];
+const SECTIONS=[['inicio','Inicio'],['alumnos','Alumnos'],['agenda','Agenda'],['asistencia','Asistencia'],['historial','Historial de clases'],['rutinas','Rutinas'],['evoluciones','Evoluciones'],['pagos','Pagos'],['profesores','Profesores y roles'],['configuracion','Configuración']];
 const NAV_ICONS={
   inicio:'<path d="M4 11.5 12 4l8 7.5"/><path d="M6 10v9a1 1 0 0 0 1 1h3v-6h4v6h3a1 1 0 0 0 1-1v-9"/>',
   alumnos:'<circle cx="9" cy="8" r="3.2"/><path d="M3.5 20a5.5 5.5 0 0 1 11 0"/><circle cx="17" cy="9" r="2.6"/><path d="M15 20a4.2 4.2 0 0 1 6.6-3.4"/>',
   agenda:'<rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M8 3v4M16 3v4M3.5 10h17"/>',
   asistencia:'<path d="M9 12.5 11 14.5l4-5"/><circle cx="12" cy="12" r="8.5"/>',
+  historial:'<path d="M4 5.5h16v15H4z"/><path d="M8 3.5v4M16 3.5v4M4 9.5h16M8 14h3M8 17h7"/>',
   profesores:'<circle cx="9" cy="8" r="3"/><path d="M3.5 20a5.5 5.5 0 0 1 11 0"/><circle cx="17.5" cy="9" r="2.5"/><path d="M15.5 20a4.3 4.3 0 0 1 5-3.8"/>',
   rutinas:'<path d="M6.5 12h3l1.35-2.4 2.3 4.8 1.35-2.4h3"/><path d="M4 12H2M22 12h-2M6 8V6M18 8V6M6 18v-2M18 18v-2"/>',
   evoluciones:'<path d="M4 19.5V6a2 2 0 0 1 2-2h9l5 5v10.5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2Z"/><path d="M14 4v5h5M8 13h8M8 17h5"/>',
@@ -4359,7 +4410,7 @@ function setView(id){
 }
 function renderCurrentView(){
   if(!canAccess(ui.view)){ui.view='inicio'}
-  const renderer={inicio:renderInicio,alumnos:renderAlumnos,agenda:renderAgenda,asistencia:renderAsistencia,rutinas:renderRutinas,evoluciones:renderEvoluciones,pagos:renderPagos,profesores:renderProfesores,configuracion:renderConfiguracion}[ui.view]||renderInicio;
+  const renderer={inicio:renderInicio,alumnos:renderAlumnos,agenda:renderAgenda,asistencia:renderAsistencia,historial:renderHistorial,rutinas:renderRutinas,evoluciones:renderEvoluciones,pagos:renderPagos,profesores:renderProfesores,configuracion:renderConfiguracion}[ui.view]||renderInicio;
   try{renderer()}catch(err){console.error(`Render falló [${ui.view}]`,err);toast('No se pudo actualizar esta sección','error')}
 }
 function renderAll(){renderCurrentView()}
@@ -4404,20 +4455,51 @@ function updateSessionUI(){
 }
 function startSession(user){
   ui.session={id:user.id,nombre:user.nombre,rol:user.rol};
-  localStorage.setItem(SESSION_KEY,JSON.stringify({userId:user.id}));
   document.body.classList.add('authenticated');navInit();updateSessionUI();setView('inicio');
 }
-function login(event){
-  event.preventDefault();const fd=new FormData($('#loginForm'));const usuario=String(fd.get('usuario')||'').trim(),password=String(fd.get('password')||'');
-  const user=data.usuarios.find(u=>u.usuario.toLowerCase()===usuario.toLowerCase()&&u.password===password);
-  if(!user){$('#loginError').textContent='Usuario o contraseña incorrectos.';return}
+function startFirebaseSession(firebaseUser){
+  const email=String(firebaseUser.email||'').trim().toLowerCase();
+  if(!email)return;
+  let user=data.usuarios.find(u=>String(u.email||u.usuario||'').trim().toLowerCase()===email);
+  if(!user){
+    user={id:firebaseUser.uid,nombre:firebaseUser.displayName||email.split('@')[0],email,usuario:email,rol:data.usuarios.some(u=>u.email)?'profesor':'admin'};
+    data.usuarios.push(user);saveData();
+  }else{
+    user.id=firebaseUser.uid;user.email=email;user.usuario=email;delete user.password;saveData();
+  }
   $('#loginError').textContent='';startSession(user);
 }
-function logout(){
-  localStorage.removeItem(SESSION_KEY);ui.session=null;ui.view='inicio';closeModal();closeConfirm();document.body.classList.remove('authenticated');$('#loginForm')?.reset();$('#loginUsername')?.focus();
+async function login(event){
+  event.preventDefault();
+  const fd=new FormData($('#loginForm'));const email=String(fd.get('email')||'').trim(),password=String(fd.get('password')||'');
+  const submit=$('#loginForm button[type="submit"]');
+  if(!isFirebaseConfigured()){
+    $('#loginError').textContent='Firebase no está configurado en este archivo. Completá FIREBASE_CONFIG con los datos de tu proyecto.';
+    return;
+  }
+  try{
+    if(submit){submit.disabled=true;submit.textContent='Ingresando…'}
+    await initFirebaseAuth();
+    await firebaseSdk.signInWithEmailAndPassword(firebaseAuth,email,password);
+  }catch(error){
+    console.error('Error de inicio de sesión Firebase',error);
+    const code=String(error?.code||'');
+    $('#loginError').textContent=code.includes('invalid-credential')||code.includes('wrong-password')||code.includes('user-not-found')?'Correo electrónico o contraseña incorrectos.':code.includes('operation-not-allowed')?'Activá el proveedor Correo electrónico/Contraseña en Firebase Authentication.':'No se pudo iniciar sesión. Verificá la configuración de Firebase.';
+  }finally{if(submit){submit.disabled=false;submit.textContent='Ingresar'}}
+}
+function logoutLocal(){
+  ui.session=null;ui.view='inicio';closeModal();closeConfirm();document.body.classList.remove('authenticated');$('#loginForm')?.reset();$('#loginUsername')?.focus();
+}
+async function logout(){
+  try{if(firebaseAuth&&firebaseSdk)await firebaseSdk.signOut(firebaseAuth)}catch(error){console.error('Error al cerrar sesión Firebase',error)}
+  logoutLocal();
 }
 function restoreSession(){
-  try{const saved=JSON.parse(localStorage.getItem(SESSION_KEY)||'null');const user=saved?.userId&&getUser(saved.userId);if(user)startSession(user)}catch(e){localStorage.removeItem(SESSION_KEY)}
+  localStorage.removeItem(SESSION_KEY);
+  initFirebaseAuth().catch(error=>{
+    console.warn('Firebase no configurado',error);
+    $('#loginError').textContent='Firebase no está configurado en este archivo.';
+  });
 }
 
 /* ---------- sidebar móvil ---------- */
@@ -4691,10 +4773,7 @@ function renderAgendaBody(){
       const professor=getUser(classProfessorId(date,slot.id));
       const rows=students.map(st=>{
         const rec=attendanceRecord(st.id,date,slot.id);
-        return `<div class="item"><div class="item-main"><strong>${esc(st.nombre)}</strong><span>${abonoTypeLabel(currentAbono(st.id)?.tipo||'')}</span></div>${admin?`<div class="item-right">
-          <button class="btn btn-sm ${rec?.presente===true?'btn-success':''}" data-action="mark-attendance" data-student="${st.id}" data-slot="${slot.id}" data-date="${date}" data-present="true">Presente</button>
-          <button class="btn btn-sm ${rec&&rec.presente===false?'btn-danger':''}" data-action="mark-attendance" data-student="${st.id}" data-slot="${slot.id}" data-date="${date}" data-present="false">Ausente</button>
-        </div>`:''}</div>`;
+        return `<div class="item"><div class="item-main"><strong>${esc(st.nombre)}</strong><span>${abonoTypeLabel(currentAbono(st.id)?.tipo||'')}</span></div>${admin?`<div class="item-right">${attendanceControlsHtml(st,slot.id,date,rec)}</div>`:''}</div>`;
       }).join('');
       const userOptions=data.usuarios.map(u=>'<option value="'+u.id+'" '+(u.id===professor?.id?'selected':'')+'>'+esc(u.nombre)+(u.rol==='admin'?' (Admin)':'')+'</option>').join('');
       const control=admin?`<div class="field" style="min-width:230px"><label>Profesor asignado</label><select class="select" data-class-professor data-date="${date}" data-slot="${slot.id}"><option value="">Sin asignar</option>${userOptions}</select></div>`:'<span class="badge b-blue">Tu clase</span>';
@@ -4726,8 +4805,17 @@ function assignClassProfessor(date,slotId,profesorId){
 }
 function renderAsistencia(){
   const date=ui.agendaDate,slots=professorClassesForDate(date,ui.session?.id);
-  $('#view-asistencia').innerHTML=`<div class="page-header"><div class="page-header-left"><h2>Asistencia</h2><p>Clases asignadas a ${esc(ui.session?.nombre||'profesor')}</p></div></div><div class="card" style="margin-bottom:14px"><div class="field" style="max-width:220px"><label>Fecha</label><input class="input" type="date" id="attendanceDateInput" value="${date}"></div></div>${slots.map(slot=>{const students=studentsForSlot(date,slot.id);return `<div class="card" style="margin-bottom:12px"><div class="card-head"><div><div class="card-title">${slot.start} – ${slot.end}</div><div class="card-sub">${students.length} alumno(s)</div></div></div>${students.map(st=>{const rec=attendanceRecord(st.id,date,slot.id);return `<div class="item"><div class="item-main"><strong>${esc(st.nombre)}</strong></div><div class="item-right"><button class="btn btn-sm ${rec?.presente===true?'btn-success':''}" data-action="mark-attendance" data-student="${st.id}" data-slot="${slot.id}" data-date="${date}" data-present="true">Presente</button><button class="btn btn-sm ${rec?.presente===false?'btn-danger':''}" data-action="mark-attendance" data-student="${st.id}" data-slot="${slot.id}" data-date="${date}" data-present="false">Ausente</button></div></div>`}).join('')||'<div class="empty">Sin alumnos anotados</div>'}</div>`}).join('')||'<div class="empty">No tenés clases asignadas para esta fecha</div>'}`;
+  $('#view-asistencia').innerHTML=`<div class="page-header"><div class="page-header-left"><h2>Asistencia</h2><p>Clases asignadas a ${esc(ui.session?.nombre||'profesor')}</p></div></div><div class="card" style="margin-bottom:14px"><div class="field" style="max-width:220px"><label>Fecha</label><input class="input" type="date" id="attendanceDateInput" value="${date}"></div></div>${slots.map(slot=>{const students=studentsForSlot(date,slot.id);return `<div class="card" style="margin-bottom:12px"><div class="card-head"><div><div class="card-title">${slot.start} – ${slot.end}</div><div class="card-sub">${students.length} alumno(s)</div></div></div>${students.map(st=>{const rec=attendanceRecord(st.id,date,slot.id);return `<div class="item"><div class="item-main"><strong>${esc(st.nombre)}</strong><span>${rec?(rec.presente?'Registrado como presente':'Registrado como ausente'):'Sin registrar'}</span></div><div class="item-right">${attendanceControlsHtml(st,slot.id,date,rec)}</div></div>`}).join('')||'<div class="empty">Sin alumnos anotados</div>'}</div>`}).join('')||'<div class="empty">No tenés clases asignadas para esta fecha</div>'}`;
   $('#attendanceDateInput')?.addEventListener('change',e=>{ui.agendaDate=e.target.value;renderAsistencia()});
+}
+
+function renderHistorial(){
+  if(!isAdmin()){setView('inicio');return}
+  const records=data.attendance.slice().sort((a,b)=>String(b.updatedAt||b.recordedAt||b.fecha).localeCompare(String(a.updatedAt||a.recordedAt||a.fecha)));
+  const present=records.filter(r=>r.presente).length,absent=records.length-present;
+  $('#view-historial').innerHTML=`<div class="page-header"><div class="page-header-left"><h2>Historial de clases</h2><p>Registro de asistencias cargadas por el administrador y profesores.</p></div></div>
+    <div class="grid metrics" style="margin-bottom:16px"><div class="card metric"><small>Asistencias registradas</small><div style="font-size:28px;font-weight:700;margin-top:8px">${records.length}</div></div><div class="card metric"><small style="color:var(--green)">Presentes</small><div style="font-size:28px;font-weight:700;margin-top:8px;color:var(--green)">${present}</div></div><div class="card metric"><small style="color:var(--red)">Ausentes</small><div style="font-size:28px;font-weight:700;margin-top:8px;color:var(--red)">${absent}</div></div></div>
+    <div class="card"><div class="card-head"><div><div class="card-title">Movimientos de asistencia</div><div class="card-sub">Cada modificación conserva la última marca de cada alumno y clase.</div></div></div>${records.length?`<div class="table-wrap"><table class="table"><thead><tr><th>Fecha</th><th>Horario</th><th>Alumno</th><th>Estado</th><th>Registrado por</th><th>Actualización</th></tr></thead><tbody>${records.map(r=>{const st=getStudent(r.studentId),slot=getSlot(r.slotId);return `<tr><td>${fmtDate(r.fecha)}</td><td>${slot?`${slot.start} – ${slot.end}`:'—'}</td><td><strong>${esc(st?.nombre||'Alumno eliminado')}</strong></td><td><span class="badge ${r.presente?'b-ok':'b-red'}">${r.presente?'Presente':'Ausente'}</span></td><td>${esc(r.recordedByName||getUser(r.recordedBy)?.nombre||'Sin dato')}</td><td>${fmtDateTime(r.updatedAt||r.recordedAt)||'—'}</td></tr>`}).join('')}</tbody></table></div>`:'<div class="empty">Todavía no hay asistencias registradas.</div>'}</div>`;
 }
 
 /* ======================= RUTINAS ======================= */
@@ -4883,30 +4971,30 @@ function renderConfiguracion(){
   }));
 }
 function renderUsersModal(){
-  const rows=data.usuarios.map(u=>`<tr><td><strong>${esc(u.nombre)}</strong></td><td>${esc(u.usuario)}</td><td><span class="badge ${u.rol==='admin'?'b-blue':'b-gray'}">${u.rol==='admin'?'Administrador':'Profesor'}</span></td><td><button class="btn btn-sm" data-action="edit-user" data-id="${u.id}">Editar</button>${u.rol==='profesor'?` <button class="btn btn-sm btn-danger" data-action="delete-user" data-id="${u.id}">Eliminar</button>`:''}${u.id===ui.session?.id?' <span class="badge b-ok">Sesión actual</span>':''}</td></tr>`).join('');
-  openModal('Gestión de roles',`<div class="billing-note" style="margin-bottom:16px">Las contraseñas se guardan sin cifrar en este navegador porque la aplicación no tiene backend. No usar credenciales sensibles reales.</div><div class="table-wrap"><table class="table"><thead><tr><th>Nombre</th><th>Usuario</th><th>Rol</th><th></th></tr></thead><tbody>${rows}</tbody></table></div><form id="userForm" style="margin-top:20px"><div class="card-title" style="margin-bottom:12px">Nuevo acceso</div><div class="form-grid"><div class="field"><label>Nombre</label><input class="input" name="nombre" required></div><div class="field"><label>Usuario</label><input class="input" name="usuario" required autocomplete="off"></div><div class="field"><label>Contraseña</label><input class="input" name="password" type="password" required autocomplete="new-password"></div><div class="field"><label>Rol</label><select class="select" name="rol"><option value="profesor">Profesor</option><option value="admin">Administrador</option></select></div></div></form>`,`<button class="btn" data-action="close-modal">Cerrar</button><button class="btn btn-success" data-action="save-user">Crear acceso</button>`,'wide');
+  const rows=data.usuarios.map(u=>`<tr><td><strong>${esc(u.nombre)}</strong></td><td>${esc(u.email||u.usuario)}</td><td><span class="badge ${u.rol==='admin'?'b-blue':'b-gray'}">${u.rol==='admin'?'Administrador':'Profesor'}</span></td><td><button class="btn btn-sm" data-action="edit-user" data-id="${u.id}">Editar</button>${u.rol==='profesor'?` <button class="btn btn-sm btn-danger" data-action="delete-user" data-id="${u.id}">Quitar rol</button>`:''}${u.id===ui.session?.id?' <span class="badge b-ok">Sesión actual</span>':''}</td></tr>`).join('');
+  openModal('Gestión de roles',`<div class="billing-note" style="margin-bottom:16px">Las cuentas y contraseñas se crean en Firebase Authentication. Acá solo se asigna el rol al correo que ya tiene una cuenta de Firebase.</div><div class="table-wrap"><table class="table"><thead><tr><th>Nombre</th><th>Correo electrónico</th><th>Rol</th><th></th></tr></thead><tbody>${rows}</tbody></table></div><form id="userForm" style="margin-top:20px"><div class="card-title" style="margin-bottom:12px">Asignar rol</div><div class="form-grid"><div class="field"><label>Nombre</label><input class="input" name="nombre" required></div><div class="field"><label>Correo electrónico de Firebase</label><input class="input" name="email" type="email" required autocomplete="off"></div><div class="field"><label>Rol</label><select class="select" name="rol"><option value="profesor">Profesor</option><option value="admin">Administrador</option></select></div></div></form>`,`<button class="btn" data-action="close-modal">Cerrar</button><button class="btn btn-success" data-action="save-user">Asignar rol</button>`,'wide');
 }
 function saveUser(){
-  if(!isAdmin())return;const fd=new FormData($('#userForm'));const nombre=String(fd.get('nombre')||'').trim(),usuario=String(fd.get('usuario')||'').trim(),password=String(fd.get('password')||''),rol=fd.get('rol')==='admin'?'admin':'profesor';
-  if(!nombre||!usuario||!password)return toast('Completá nombre, usuario y contraseña','error');
-  if(data.usuarios.some(u=>u.usuario.toLowerCase()===usuario.toLowerCase()))return toast('Ese usuario ya existe','error');
-  data.usuarios.push({id:uid('usr'),nombre,usuario,password,rol});saveData();renderUsersModal();toast('Acceso creado');
+  if(!isAdmin())return;const fd=new FormData($('#userForm'));const nombre=String(fd.get('nombre')||'').trim(),email=String(fd.get('email')||'').trim().toLowerCase(),rol=fd.get('rol')==='admin'?'admin':'profesor';
+  if(!nombre||!email)return toast('Completá nombre y correo electrónico','error');
+  if(data.usuarios.some(u=>String(u.email||u.usuario).toLowerCase()===email))return toast('Ese correo ya tiene un rol asignado','error');
+  data.usuarios.push({id:uid('usr'),nombre,email,usuario:email,rol});saveData();renderUsersModal();toast('Rol asignado');
 }
 function renderProfesores(){
   if(!isAdmin()){setView('inicio');return}
   const admins=data.usuarios.filter(u=>u.rol==='admin').length,profes=data.usuarios.filter(u=>u.rol==='profesor').length;
-  $('#view-profesores').innerHTML=`<div class="page-header"><div class="page-header-left"><h2>Profesores y roles</h2><p>Crear accesos y administrar permisos del equipo</p></div><button class="btn btn-primary" data-action="manage-users">+ Agregar acceso</button></div><div class="grid metrics"><div class="card metric"><small style="color:var(--muted);font-size:11px;text-transform:uppercase;font-weight:700">Administradores</small><div style="font-size:28px;font-weight:700;margin-top:8px">${admins}</div></div><div class="card metric"><small style="color:var(--muted);font-size:11px;text-transform:uppercase;font-weight:700">Profesores</small><div style="font-size:28px;font-weight:700;margin-top:8px">${profes}</div></div></div><div class="card" style="margin-top:16px"><div class="card-head"><div><div class="card-title">Usuarios con acceso</div><div class="card-sub">Cada profesor accede con su usuario y contraseña.</div></div><button class="btn btn-sm" data-action="manage-users">Gestionar</button></div><div class="list">${data.usuarios.map(u=>`<div class="item"><div class="item-main"><strong>${esc(u.nombre)}</strong><span>${esc(u.usuario)}</span></div><div class="item-right"><span class="badge ${u.rol==='admin'?'b-blue':'b-gray'}">${u.rol==='admin'?'Administrador':'Profesor'}</span></div></div>`).join('')}</div></div>`;
+  $('#view-profesores').innerHTML=`<div class="page-header"><div class="page-header-left"><h2>Profesores y roles</h2><p>Asignar permisos a cuentas creadas en Firebase</p></div><button class="btn btn-primary" data-action="manage-users">+ Asignar rol</button></div><div class="grid metrics"><div class="card metric"><small style="color:var(--muted);font-size:11px;text-transform:uppercase;font-weight:700">Administradores</small><div style="font-size:28px;font-weight:700;margin-top:8px">${admins}</div></div><div class="card metric"><small style="color:var(--muted);font-size:11px;text-transform:uppercase;font-weight:700">Profesores</small><div style="font-size:28px;font-weight:700;margin-top:8px">${profes}</div></div></div><div class="card" style="margin-top:16px"><div class="card-head"><div><div class="card-title">Usuarios con rol asignado</div><div class="card-sub">Cada cuenta ingresa con su correo y contraseña de Firebase.</div></div><button class="btn btn-sm" data-action="manage-users">Gestionar</button></div><div class="list">${data.usuarios.map(u=>`<div class="item"><div class="item-main"><strong>${esc(u.nombre)}</strong><span>${esc(u.email||u.usuario)}</span></div><div class="item-right"><span class="badge ${u.rol==='admin'?'b-blue':'b-gray'}">${u.rol==='admin'?'Administrador':'Profesor'}</span></div></div>`).join('')}</div></div>`;
 }
 function editUser(id){
   const u=getUser(id);if(!isAdmin()||!u)return;
-  openModal(`Editar ${u.rol==='admin'?'administrador':'profesor'}`,`<form id="editUserForm"><div class="form-grid"><div class="field"><label>Nombre</label><input class="input" name="nombre" value="${esc(u.nombre)}" required></div><div class="field"><label>Usuario</label><input class="input" name="usuario" value="${esc(u.usuario)}" required></div><div class="field"><label>Nueva contraseña</label><input class="input" type="password" name="password" placeholder="Dejar vacía para mantener"></div></div></form>`,`<button class="btn" data-action="manage-users">Cancelar</button><button class="btn btn-success" data-action="save-edit-user" data-id="${u.id}">Guardar</button>`);
+  openModal(`Editar ${u.rol==='admin'?'administrador':'profesor'}`,`<form id="editUserForm"><div class="form-grid"><div class="field"><label>Nombre</label><input class="input" name="nombre" value="${esc(u.nombre)}" required></div><div class="field"><label>Correo electrónico de Firebase</label><input class="input" type="email" name="email" value="${esc(u.email||u.usuario)}" required></div><div class="field"><label>Rol</label><select class="select" name="rol"><option value="profesor" ${u.rol==='profesor'?'selected':''}>Profesor</option><option value="admin" ${u.rol==='admin'?'selected':''}>Administrador</option></select></div></div></form>`,`<button class="btn" data-action="manage-users">Cancelar</button><button class="btn btn-success" data-action="save-edit-user" data-id="${u.id}">Guardar</button>`);
 }
 function saveEditUser(id){
-  const u=getUser(id);if(!isAdmin()||!u)return;const fd=new FormData($('#editUserForm'));const nombre=String(fd.get('nombre')||'').trim(),usuario=String(fd.get('usuario')||'').trim(),password=String(fd.get('password')||'');
-  if(!nombre||!usuario)return toast('Completá nombre y usuario','error');if(data.usuarios.some(x=>x.id!==id&&x.usuario.toLowerCase()===usuario.toLowerCase()))return toast('Ese usuario ya existe','error');Object.assign(u,{nombre,usuario});if(password)u.password=password;if(u.id===ui.session?.id){ui.session.nombre=u.nombre;updateSessionUI()}saveData();renderUsersModal();toast('Usuario actualizado');
+  const u=getUser(id);if(!isAdmin()||!u)return;const fd=new FormData($('#editUserForm'));const nombre=String(fd.get('nombre')||'').trim(),email=String(fd.get('email')||'').trim().toLowerCase(),rol=fd.get('rol')==='admin'?'admin':'profesor';
+  if(!nombre||!email)return toast('Completá nombre y correo electrónico','error');if(data.usuarios.some(x=>x.id!==id&&String(x.email||x.usuario).toLowerCase()===email))return toast('Ese correo ya tiene un rol asignado','error');Object.assign(u,{nombre,email,usuario:email,rol});if(u.id===ui.session?.id){ui.session.nombre=u.nombre;ui.session.rol=u.rol;updateSessionUI();navInit()}saveData();renderUsersModal();toast('Usuario actualizado');
 }
 function deleteUser(id){
-  const u=getUser(id);if(!isAdmin()||!u||u.rol!=='profesor')return;openConfirm('Eliminar profesor',`Se eliminará el acceso de ${u.nombre}. Las clases ya asignadas quedarán sin profesor.`,()=>{data.usuarios=data.usuarios.filter(x=>x.id!==id);data.clases=data.clases.filter(c=>c.profesorId!==id);saveData();closeConfirm();renderUsersModal();toast('Profesor eliminado','info')});
+  const u=getUser(id);if(!isAdmin()||!u||u.rol!=='profesor')return;openConfirm('Quitar rol de profesor',`Se quitará el permiso de ${u.nombre}. La cuenta seguirá existiendo en Firebase y las clases asignadas quedarán sin profesor.`,()=>{data.usuarios=data.usuarios.filter(x=>x.id!==id);data.clases=data.clases.filter(c=>c.profesorId!==id);saveData();closeConfirm();renderUsersModal();toast('Rol quitado','info')});
 }
 function addSlot(){
   data.config.slots.push({id:uid('slot'),start:'10:00',end:'11:00',capacity:null});
@@ -4943,7 +5031,7 @@ document.addEventListener('click',event=>{
     case 'goto-config':setView('configuracion');break;
     case 'agenda-mode':ui.agendaMode=button.dataset.mode;renderAgendaBody();$$('.action-btns [data-action="agenda-mode"]').forEach(b=>b.classList.toggle('btn-primary',b.dataset.mode===ui.agendaMode));break;
     case 'agenda-goto-day':ui.agendaMode='day';ui.agendaDate=button.dataset.date;renderAgenda();break;
-    case 'mark-attendance':setAttendance(button.dataset.student,button.dataset.date,button.dataset.slot,button.dataset.present==='true');renderAgendaBody();break;
+    case 'mark-attendance':setAttendance(button.dataset.student,button.dataset.date,button.dataset.slot,button.dataset.present==='true');renderCurrentView();break;
     case 'new-routine-for':openNewRoutine(button.dataset.id);break;
     case 'add-exercise-row':addExerciseRow();break;
     case 'remove-exercise-row':removeExerciseRow(button.dataset.row);break;
